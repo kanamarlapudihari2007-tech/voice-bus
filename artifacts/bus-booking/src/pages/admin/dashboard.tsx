@@ -4,6 +4,7 @@ import { useGetStats, getGetStatsQueryKey, useGetPopularRoutes, getGetPopularRou
 import { useAuth } from "@/lib/auth";
 import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Users, Bus, Ticket, TrendingUp, Map } from "lucide-react";
 
