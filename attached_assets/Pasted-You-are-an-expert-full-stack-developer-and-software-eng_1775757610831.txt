@@ -1,0 +1,215 @@
+You are an expert full-stack developer and software engineer. Build a complete, production-quality prototype of a Voice-Based Bus Transportation System with modern frameworks, clean UI, and real-world features.
+
+---
+
+🎯 PROJECT GOAL
+
+Develop a smart bus transportation system that allows users to search and book buses using both voice and text input. The system must include user and admin roles, seat selection UI, and a clean, modern interface.
+
+---
+
+⚙️ TECHNOLOGY STACK
+
+Frontend:
+
+* React.js (with HTML, CSS, JavaScript)
+* Tailwind CSS or Bootstrap (for clean UI)
+
+Backend:
+
+* Java with Spring Boot
+
+Database:
+
+* MySQL
+
+ORM:
+
+* Spring Data JPA (Hibernate)
+
+Voice Recognition:
+
+* Web Speech API (JavaScript)
+
+---
+
+👤 AUTHENTICATION SYSTEM
+
+* Secure login system
+* Roles:
+
+  1. USER
+  2. ADMIN
+* Use JWT or session-based authentication
+* Role-based access control
+
+---
+
+🎤 INPUT SYSTEM (CORE FEATURE)
+
+System must support BOTH:
+
+1. Voice Input:
+
+   * Use microphone
+   * Convert speech → text
+   * Example:
+
+     * "Show buses from Hyderabad to Vijayawada"
+     * "Search bus number 123"
+
+2. Text Input:
+
+   * Manual search fields
+
+👉 IMPORTANT:
+Both inputs must use the SAME backend API and logic.
+
+---
+
+🧾 USER FEATURES
+
+* Search buses:
+
+  * From → To
+  * Bus number
+
+* Display results (cards or table):
+
+  * Bus Number
+  * From → To
+  * 🟢 Departure Time
+  * 🔴 Arrival Time
+  * Available Seats
+
+* Seat Selection UI:
+
+  * Show bus seat layout (grid format)
+  * Seat types:
+
+    * 🟢 Available (clickable)
+    * 🔴 Booked (disabled)
+    * 🔵 Selected (highlighted)
+  * Allow multiple seat selection
+  * Show total selected seats
+
+* Booking:
+
+  * Confirm selected seats
+  * Update database
+
+---
+
+🛠️ ADMIN PANEL
+
+Admin can:
+
+* Add buses
+* Delete buses
+* Update bus details
+
+👉 Use a SIMPLE FORM:
+
+* Bus Number
+* From Location
+* To Location
+* 🟢 Departure Time
+* 🔴 Arrival Time
+* Seats
+
+Ensure admin UI is clean and easy to use.
+
+---
+
+🗄️ DATABASE DESIGN
+
+Users:
+
+* id
+* username
+* password
+* role
+
+Buses:
+
+* id
+* busNumber
+* fromLocation
+* toLocation
+* departureTime
+* arrivalTime
+* availableSeats
+
+Bookings:
+
+* id
+* userId
+* busId
+* seatNumbers (e.g., "1,2,5")
+* bookingTime
+
+---
+
+🔗 BACKEND FEATURES
+
+* REST APIs (Spring Boot):
+
+  * /auth/login
+  * /buses/search
+  * /buses/{id}
+  * /booking
+  * /admin/buses
+
+* Use JPA/Hibernate
+
+* Validation & error handling
+
+* Transaction management for booking
+
+---
+
+🎨 UI / UX REQUIREMENTS
+
+* Clean, modern, professional interface
+* Responsive design (mobile-friendly)
+* Use:
+
+  * Cards for buses
+  * Icons (🎤 mic, 🚌 bus, 🔍 search)
+* Proper spacing and alignment
+* Smooth interactions and loading states
+
+---
+
+🔄 SYSTEM FLOW
+
+1. User/Admin logs in
+2. User:
+
+   * Uses voice or text to search
+   * Views buses
+   * Selects seats
+   * Books ticket
+3. Admin:
+
+   * Manages buses and schedules
+
+---
+
+🚀 OUTPUT EXPECTATION
+
+* Fully functional React frontend
+* Spring Boot backend with APIs
+* MySQL database
+* Voice input working
+* Seat selection UI working
+* Clean and impressive UI
+* Well-structured project
+
+---
+
+💡 NOTE
+
+Focus on simplicity + real-world usability + clean design. The system should look like a real product (similar to a mini RedBus) and be suitable for hackathons and portfolio projects.
+
+---

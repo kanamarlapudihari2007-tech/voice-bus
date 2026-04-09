@@ -3,13 +3,24 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Voice-Based Bus Transportation System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: buses
+    description: Bus management operations
+  - name: bookings
+    description: Booking operations
+  - name: admin
+    description: Admin operations
+  - name: stats
+    description: Statistics and analytics
+
 paths:
   /healthz:
     get:
@@ -24,6 +35,369 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: User registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Registration failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      parameters:
+        - in: header
+          name: x-user-id
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /buses/search:
+    get:
+      operationId: searchBuses
+      tags: [buses]
+      summary: Search buses
+      description: Search buses by from/to locations or bus number (supports voice-parsed queries)
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+          description: Departure location
+        - in: query
+          name: to
+          schema:
+            type: string
+          description: Arrival location
+        - in: query
+          name: busNumber
+          schema:
+            type: string
+          description: Bus number to search for
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: Free-text or voice query
+      responses:
+        "200":
+          description: List of buses matching search
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bus"
+
+  /buses:
+    get:
+      operationId: listBuses
+      tags: [buses]
+      summary: List all buses
+      responses:
+        "200":
+          description: List of all buses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bus"
+    post:
+      operationId: createBus
+      tags: [admin]
+      summary: Create a new bus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBusRequest"
+      responses:
+        "201":
+          description: Bus created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bus"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /buses/{id}:
+    get:
+      operationId: getBusById
+      tags: [buses]
+      summary: Get bus details including seat layout
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bus details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BusDetail"
+        "404":
+          description: Bus not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateBus
+      tags: [admin]
+      summary: Update bus details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBusRequest"
+      responses:
+        "200":
+          description: Bus updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bus"
+        "404":
+          description: Bus not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteBus
+      tags: [admin]
+      summary: Delete a bus
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Bus deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Bus not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings:
+    get:
+      operationId: listBookings
+      tags: [bookings]
+      summary: List bookings for current user
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: integer
+          description: Filter by user ID
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        "201":
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          description: Seats unavailable or validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{id}:
+    get:
+      operationId: getBookingById
+      tags: [bookings]
+      summary: Get booking details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: cancelBooking
+      tags: [bookings]
+      summary: Cancel a booking
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stats/overview:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get system statistics
+      responses:
+        "200":
+          description: Overview statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsOverview"
+
+  /stats/popular-routes:
+    get:
+      operationId: getPopularRoutes
+      tags: [stats]
+      summary: Get popular bus routes
+      responses:
+        "200":
+          description: Popular routes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PopularRoute"
+
+  /admin/bookings:
+    get:
+      operationId: listAllBookings
+      tags: [admin]
+      summary: List all bookings (admin only)
+      responses:
+        "200":
+          description: All bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +408,231 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          default: USER
+      required:
+        - username
+        - password
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+          enum: [USER, ADMIN]
+      required:
+        - id
+        - username
+        - role
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    Bus:
+      type: object
+      properties:
+        id:
+          type: integer
+        busNumber:
+          type: string
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        departureTime:
+          type: string
+        arrivalTime:
+          type: string
+        totalSeats:
+          type: integer
+        availableSeats:
+          type: integer
+        price:
+          type: number
+      required:
+        - id
+        - busNumber
+        - fromLocation
+        - toLocation
+        - departureTime
+        - arrivalTime
+        - totalSeats
+        - availableSeats
+        - price
+
+    SeatInfo:
+      type: object
+      properties:
+        seatNumber:
+          type: integer
+        isBooked:
+          type: boolean
+      required:
+        - seatNumber
+        - isBooked
+
+    BusDetail:
+      allOf:
+        - $ref: "#/components/schemas/Bus"
+        - type: object
+          properties:
+            seats:
+              type: array
+              items:
+                $ref: "#/components/schemas/SeatInfo"
+          required:
+            - seats
+
+    CreateBusRequest:
+      type: object
+      properties:
+        busNumber:
+          type: string
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        departureTime:
+          type: string
+        arrivalTime:
+          type: string
+        totalSeats:
+          type: integer
+        price:
+          type: number
+      required:
+        - busNumber
+        - fromLocation
+        - toLocation
+        - departureTime
+        - arrivalTime
+        - totalSeats
+        - price
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        busId:
+          type: integer
+        seatNumbers:
+          type: string
+        bookingTime:
+          type: string
+        status:
+          type: string
+          enum: [CONFIRMED, CANCELLED]
+        bus:
+          $ref: "#/components/schemas/Bus"
+        username:
+          type: string
+      required:
+        - id
+        - userId
+        - busId
+        - seatNumbers
+        - bookingTime
+        - status
+
+    CreateBookingRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+        busId:
+          type: integer
+        seatNumbers:
+          type: string
+      required:
+        - userId
+        - busId
+        - seatNumbers
+
+    StatsOverview:
+      type: object
+      properties:
+        totalBuses:
+          type: integer
+        totalBookings:
+          type: integer
+        totalUsers:
+          type: integer
+        activeRoutes:
+          type: integer
+      required:
+        - totalBuses
+        - totalBookings
+        - totalUsers
+        - activeRoutes
+
+    PopularRoute:
+      type: object
+      properties:
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        bookingCount:
+          type: integer
+        busCount:
+          type: integer
+      required:
+        - fromLocation
+        - toLocation
+        - bookingCount
+        - busCount

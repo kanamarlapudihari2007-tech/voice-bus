@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "VoiceBus - Smart Bus Booking"
+version = "1.0.0"
+id = "artifacts/bus-booking"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18990
+
+[services.development]
+run = "pnpm --filter @workspace/bus-booking run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bus-booking", "run", "build" ]
+publicDir = "artifacts/bus-booking/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18990"
+BASE_PATH = "/"
