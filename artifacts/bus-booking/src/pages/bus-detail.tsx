@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Clock, MapPin, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, CheckCircle2, Loader2, Bus, Users, ArrowRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function BusDetail() {
@@ -22,98 +22,57 @@ export default function BusDetail() {
 
   const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
 
-  // Fetch bus details
   const { data: bus, isLoading, isError } = useGetBusById(busId, {
-    query: {
-      enabled: !!busId,
-      queryKey: getGetBusByIdQueryKey(busId)
-    }
+    query: { enabled: !!busId, queryKey: getGetBusByIdQueryKey(busId) }
   });
 
   const createBooking = useCreateBooking();
 
   const handleSeatClick = (seatNumber: number, isBooked: boolean) => {
     if (isBooked) return;
-
-    setSelectedSeats(prev => {
-      if (prev.includes(seatNumber)) {
-        return prev.filter(s => s !== seatNumber);
-      } else {
-        return [...prev, seatNumber];
-      }
-    });
+    setSelectedSeats(prev =>
+      prev.includes(seatNumber) ? prev.filter(s => s !== seatNumber) : [...prev, seatNumber]
+    );
   };
 
   const handleBook = async () => {
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please login to book tickets",
-      });
+      toast({ title: "Authentication required", description: "Please login to book tickets" });
       setLocation("/");
       return;
     }
-
     if (selectedSeats.length === 0) return;
-
     try {
-      await createBooking.mutateAsync({
-        data: {
-          busId,
-          userId: user.id,
-          seatNumbers: selectedSeats.join(",")
-        }
-      });
-
-      toast({
-        title: "Booking confirmed!",
-        description: `Successfully booked ${selectedSeats.length} seats.`,
-      });
-
-      // Invalidate queries to refresh data
+      await createBooking.mutateAsync({ data: { busId, userId: user.id, seatNumbers: selectedSeats.join(",") } });
+      toast({ title: "Booking confirmed!", description: `Successfully booked ${selectedSeats.length} seat${selectedSeats.length !== 1 ? "s" : ""}.` });
       queryClient.invalidateQueries({ queryKey: getGetBusByIdQueryKey(busId) });
-      
       setLocation("/bookings");
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Booking failed",
-        description: error.message || "Failed to confirm booking",
-      });
+      toast({ variant: "destructive", title: "Booking failed", description: error.message || "Failed to confirm booking" });
     }
   };
 
-  // Organize seats into a layout if we have them
   const seatRows = useMemo(() => {
     if (!bus?.seats) return [];
-    
+    const sorted = [...bus.seats].sort((a, b) => a.seatNumber - b.seatNumber);
     const rows = [];
-    const seatsPerRow = 4; // 2x2 layout with aisle
-    
-    // Sort seats by number
-    const sortedSeats = [...bus.seats].sort((a, b) => a.seatNumber - b.seatNumber);
-    
-    for (let i = 0; i < sortedSeats.length; i += seatsPerRow) {
-      rows.push(sortedSeats.slice(i, i + seatsPerRow));
-    }
-    
+    for (let i = 0; i < sorted.length; i += 4) rows.push(sorted.slice(i, i + 4));
     return rows;
   }, [bus?.seats]);
 
   const totalPrice = bus ? bus.price * selectedSeats.length : 0;
+  const bookedCount = bus?.seats?.filter(s => s.isBooked).length ?? 0;
+  const availableCount = (bus?.seats?.length ?? 0) - bookedCount;
 
   if (isLoading) {
     return (
       <Layout>
         <div className="max-w-5xl mx-auto space-y-6">
           <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              <Skeleton className="h-96 w-full rounded-xl" />
-            </div>
-            <div>
-              <Skeleton className="h-64 w-full rounded-xl" />
-            </div>
+            <div className="lg:col-span-2"><Skeleton className="h-96 w-full rounded-xl" /></div>
+            <div><Skeleton className="h-64 w-full rounded-xl" /></div>
           </div>
         </div>
       </Layout>
@@ -136,70 +95,117 @@ export default function BusDetail() {
   return (
     <Layout>
       <div className="max-w-5xl mx-auto space-y-6">
-        <Button variant="ghost" onClick={() => setLocation("/search")} className="mb-2 -ml-4" data-testid="button-back">
+
+        <Button variant="ghost" onClick={() => setLocation("/search")} className="-ml-2 text-gray-500 hover:text-gray-800" data-testid="button-back">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Search
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column: Seat Layout */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-md">
-              <CardHeader className="bg-gray-50 border-b pb-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-2xl font-bold flex items-center gap-3">
-                      Bus {bus.busNumber}
-                    </CardTitle>
-                    <div className="text-sm text-gray-500 mt-2 flex items-center gap-4">
-                      <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {bus.fromLocation} to {bus.toLocation}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {bus.departureTime}</span>
-                    </div>
+        {/* Hero route banner */}
+        <div
+          className="relative rounded-2xl overflow-hidden"
+          style={{
+            backgroundImage: `linear-gradient(135deg, rgba(8,25,60,0.90) 0%, rgba(5,80,115,0.84) 100%), url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1400&q=80')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
+                <Bus className="w-5 h-5 text-white" />
+              </div>
+              <Badge className="bg-white/15 text-white/90 border-white/20 text-sm font-bold backdrop-blur-sm">
+                Bus {bus.busNumber}
+              </Badge>
+              <Badge className={`text-xs font-semibold border-0 ${availableCount > 10 ? "bg-emerald-500/30 text-emerald-200" : availableCount > 0 ? "bg-amber-500/30 text-amber-200" : "bg-red-500/30 text-red-200"}`}>
+                <Users className="w-3 h-3 mr-1" /> {availableCount} seats left
+              </Badge>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div>
+                <div className="text-4xl font-black text-white">{bus.departureTime}</div>
+                <div className="text-white/60 mt-1 font-medium flex items-center gap-1 text-sm">
+                  <MapPin className="w-3.5 h-3.5" />{bus.fromLocation}
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full flex items-center gap-2">
+                  <div className="flex-1 border-t-2 border-dashed border-white/30" />
+                  <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center border border-white/20">
+                    <ArrowRight className="w-4 h-4 text-white" />
                   </div>
-                  <div className="flex flex-wrap gap-3 text-sm font-medium">
-                    <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-white border-2 border-emerald-500"></div> Available</div>
-                    <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-red-100 border-2 border-red-300"></div> Booked</div>
-                    <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-primary border-2 border-primary shadow-sm"></div> Selected</div>
+                  <div className="flex-1 border-t-2 border-dashed border-white/30" />
+                </div>
+                <span className="text-white/40 text-xs flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Direct Route
+                </span>
+              </div>
+              <div className="text-right">
+                <div className="text-4xl font-black text-white">{bus.arrivalTime}</div>
+                <div className="text-white/60 mt-1 font-medium flex items-center gap-1 justify-end text-sm">
+                  <MapPin className="w-3.5 h-3.5" />{bus.toLocation}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Seat map */}
+          <div className="lg:col-span-2">
+            <Card className="shadow-sm border border-gray-100 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-primary to-cyan-500" />
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-bold text-gray-900">Select Your Seats</CardTitle>
+                  <div className="flex items-center gap-4 text-xs font-semibold">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-md border-2 border-emerald-500 bg-white" />
+                      <span className="text-gray-500">Available</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-md border-2 border-red-300 bg-red-50" />
+                      <span className="text-gray-500">Booked</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-md bg-primary border-2 border-primary" />
+                      <span className="text-gray-500">Selected</span>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-8">
-                
-                {/* Driver Area Indicator */}
-                <div className="flex justify-end mb-8 pr-12">
-                  <div className="border-2 border-gray-300 rounded-t-xl rounded-b-md px-4 py-2 bg-gray-100 text-gray-500 font-medium text-xs">
+              <CardContent className="pb-8">
+                {/* Driver */}
+                <div className="flex justify-end mb-6 pr-10">
+                  <div className="border-2 border-gray-200 rounded-t-xl rounded-b px-5 py-2 bg-gray-50 text-gray-400 font-semibold text-xs uppercase tracking-wide">
                     Driver
                   </div>
                 </div>
 
-                {/* Seat Grid */}
-                <div className="max-w-md mx-auto bg-gray-50 p-6 rounded-3xl border shadow-inner">
-                  <div className="space-y-4">
+                {/* Seats */}
+                <div className="max-w-sm mx-auto bg-gradient-to-b from-gray-50 to-gray-100 p-6 rounded-2xl border border-gray-200 shadow-inner">
+                  <div className="space-y-3">
                     {seatRows.map((row, rowIndex) => (
-                      <div key={rowIndex} className="flex justify-center items-center gap-4">
-                        {/* Left seats (0, 1) */}
-                        <div className="flex gap-3">
+                      <div key={rowIndex} className="flex justify-center items-center gap-3">
+                        <div className="flex gap-2">
                           {row.slice(0, 2).map(seat => (
-                            <SeatButton 
-                              key={seat.seatNumber} 
-                              seat={seat} 
+                            <SeatButton
+                              key={seat.seatNumber}
+                              seat={seat}
                               isSelected={selectedSeats.includes(seat.seatNumber)}
                               onClick={() => handleSeatClick(seat.seatNumber, seat.isBooked)}
                             />
                           ))}
                         </div>
-                        
-                        {/* Aisle */}
-                        <div className="w-8 md:w-12 flex justify-center text-gray-300">
-                          {/* Aisle marker, empty space */}
-                        </div>
-                        
-                        {/* Right seats (2, 3) */}
-                        <div className="flex gap-3">
+                        <div className="w-6" />
+                        <div className="flex gap-2">
                           {row.slice(2, 4).map(seat => (
-                            <SeatButton 
-                              key={seat.seatNumber} 
-                              seat={seat} 
+                            <SeatButton
+                              key={seat.seatNumber}
+                              seat={seat}
                               isSelected={selectedSeats.includes(seat.seatNumber)}
                               onClick={() => handleSeatClick(seat.seatNumber, seat.isBooked)}
                             />
@@ -213,105 +219,100 @@ export default function BusDetail() {
             </Card>
           </div>
 
-          {/* Right Column: Booking Summary */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24 shadow-lg border-primary/20 border-2">
-              <CardHeader className="bg-primary/5 pb-4">
-                <CardTitle>Booking Summary</CardTitle>
+          {/* Booking summary */}
+          <div>
+            <Card className="sticky top-24 shadow-lg border border-gray-100 overflow-hidden">
+              <div className="h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold text-gray-900">Booking Summary</CardTitle>
               </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                
+              <CardContent className="space-y-5">
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Departure</span>
-                    <span className="font-semibold text-gray-900">{bus.fromLocation}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Arrival</span>
-                    <span className="font-semibold text-gray-900">{bus.toLocation}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Time</span>
-                    <span className="font-semibold text-gray-900">{bus.departureTime}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Price per seat</span>
-                    <span className="font-semibold text-gray-900">${bus.price}</span>
-                  </div>
+                  {[
+                    { label: "Departure", value: bus.fromLocation },
+                    { label: "Arrival", value: bus.toLocation },
+                    { label: "Departure time", value: bus.departureTime },
+                    { label: "Price per seat", value: `$${bus.price}` },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex justify-between items-center">
+                      <span className="text-gray-500">{label}</span>
+                      <span className="font-bold text-gray-900">{value}</span>
+                    </div>
+                  ))}
                 </div>
 
                 <Separator />
 
                 <div>
-                  <h4 className="font-medium text-sm text-gray-500 mb-3">Selected Seats</h4>
+                  <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Selected Seats</div>
                   {selectedSeats.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {selectedSeats.sort((a,b) => a-b).map(seatNum => (
-                        <Badge key={seatNum} variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1">
+                      {selectedSeats.sort((a, b) => a - b).map(seatNum => (
+                        <span
+                          key={seatNum}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20"
+                        >
                           Seat {seatNum}
-                        </Badge>
+                        </span>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-400 italic">No seats selected yet. Click on available seats to select them.</p>
+                    <p className="text-sm text-gray-400 italic">Tap seats on the map to select them.</p>
                   )}
                 </div>
 
                 <Separator />
 
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">Total Amount</span>
-                  <span className="text-3xl font-bold text-primary" data-testid="text-total-price">
+                  <span className="font-semibold text-gray-600 text-sm">Total</span>
+                  <span className="text-3xl font-black text-gray-900" data-testid="text-total-price">
                     ${totalPrice}
                   </span>
                 </div>
               </CardContent>
-              <CardFooter className="bg-gray-50 pt-6">
-                <Button 
-                  className="w-full h-14 text-lg font-bold shadow-md" 
-                  size="lg"
+              <CardFooter className="bg-gray-50 pt-4">
+                <Button
+                  className="w-full h-12 text-base font-bold shadow-md"
                   disabled={selectedSeats.length === 0 || createBooking.isPending}
                   onClick={handleBook}
                   data-testid="button-confirm-booking"
                 >
-                  {createBooking.isPending ? (
-                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing...</>
-                  ) : (
-                    `Book ${selectedSeats.length} Ticket${selectedSeats.length !== 1 ? 's' : ''}`
-                  )}
+                  {createBooking.isPending
+                    ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Processing...</>
+                    : selectedSeats.length === 0
+                      ? "Select seats to book"
+                      : `Book ${selectedSeats.length} Ticket${selectedSeats.length !== 1 ? "s" : ""}`
+                  }
                 </Button>
               </CardFooter>
             </Card>
           </div>
-
         </div>
       </div>
     </Layout>
   );
 }
 
-// Seat Component helper
-function SeatButton({ seat, isSelected, onClick }: { seat: any, isSelected: boolean, onClick: () => void }) {
-  let btnClass = "";
-  
+function SeatButton({ seat, isSelected, onClick }: { seat: any; isSelected: boolean; onClick: () => void }) {
+  let cls = "";
   if (seat.isBooked) {
-    btnClass = "bg-red-50 border-red-200 text-red-400 cursor-not-allowed opacity-60";
+    cls = "bg-red-50 border-red-200 text-red-300 cursor-not-allowed";
   } else if (isSelected) {
-    btnClass = "bg-primary border-primary text-white shadow-md transform scale-105";
+    cls = "bg-primary border-primary text-white shadow-lg scale-105";
   } else {
-    btnClass = "bg-white border-emerald-500 text-emerald-700 hover:bg-emerald-50 shadow-sm hover:shadow";
+    cls = "bg-white border-emerald-400 text-emerald-700 hover:bg-emerald-50 hover:shadow-md";
   }
 
   return (
     <button
       disabled={seat.isBooked}
       onClick={onClick}
-      className={`w-12 h-14 sm:w-14 sm:h-16 rounded-t-xl rounded-b-md border-2 flex flex-col items-center justify-center transition-all duration-200 ${btnClass}`}
+      className={`w-12 h-14 rounded-t-xl rounded-b border-2 flex flex-col items-center justify-center transition-all duration-150 ${cls}`}
       data-testid={`button-seat-${seat.seatNumber}`}
-      title={seat.isBooked ? `Seat ${seat.seatNumber} (Booked)` : `Seat ${seat.seatNumber} (Available)`}
+      title={seat.isBooked ? `Seat ${seat.seatNumber} (Booked)` : `Seat ${seat.seatNumber}`}
     >
-      <span className="text-xs sm:text-sm font-bold block">{seat.seatNumber}</span>
-      {isSelected && <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 mt-1" />}
+      <span className="text-sm font-black">{seat.seatNumber}</span>
+      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" />}
     </button>
   );
 }
