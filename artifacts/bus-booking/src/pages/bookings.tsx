@@ -37,9 +37,7 @@ export default function Bookings() {
     if (!confirm("Are you sure you want to cancel this booking?")) return;
 
     try {
-      await cancelBooking.mutateAsync({
-        data: { id: bookingId }
-      });
+      await cancelBooking.mutateAsync({ id: bookingId });
       
       toast({
         title: "Booking cancelled",
