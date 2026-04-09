@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bus, Mic, Search, MapPin, Users, ArrowRight, Star, Clock } from "lucide-react";
+import { Bus, Mic, MicOff, Search, MapPin, Users, ArrowRight, Star, Clock, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function SearchPage() {
@@ -62,8 +62,13 @@ export default function SearchPage() {
     }
   }, [toast]);
 
-  const { isListening, isSupported, startListening, stopListening } = useVoice({
+  const handleVoiceError = useCallback((msg: string) => {
+    toast({ variant: "destructive", title: "Microphone error", description: msg });
+  }, [toast]);
+
+  const { isListening, isSupported, errorMessage, startListening, stopListening } = useVoice({
     onResult: handleVoiceResult,
+    onError: handleVoiceError,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -110,26 +115,49 @@ export default function SearchPage() {
             type="button"
             onClick={isListening ? stopListening : startListening}
             disabled={!isSupported}
-            title={!isSupported ? "Voice search not supported in this browser" : "Tap to speak"}
+            title={
+              !isSupported
+                ? "Voice search not supported in this browser"
+                : isListening
+                  ? "Click to stop"
+                  : "Tap to speak"
+            }
             data-testid="button-voice-search"
-            className={`w-20 h-20 rounded-full border-4 border-white/40 shadow-2xl flex items-center justify-center transition-all duration-300 focus:outline-none
+            className={`w-20 h-20 rounded-full border-4 shadow-2xl flex items-center justify-center transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white/30
               ${isListening
-                ? "bg-red-500 scale-110 animate-pulse border-red-300"
-                : "bg-white/20 backdrop-blur-md hover:bg-white/30 hover:scale-105"
-              } ${!isSupported ? "opacity-40 cursor-not-allowed" : ""}`}
+                ? "bg-red-500 border-red-300 scale-110 animate-pulse"
+                : !isSupported
+                  ? "bg-white/10 border-white/20 opacity-50 cursor-not-allowed"
+                  : "bg-white/20 backdrop-blur-md border-white/40 hover:bg-white/30 hover:scale-105 active:scale-95"
+              }`}
           >
-            <Mic className={`w-8 h-8 text-white ${isListening ? "animate-bounce" : ""}`} />
+            {!isSupported
+              ? <MicOff className="w-8 h-8 text-white/60" />
+              : <Mic className={`w-8 h-8 text-white ${isListening ? "animate-bounce" : ""}`} />
+            }
           </button>
 
-          {isListening ? (
-            <p className="mt-4 text-white/90 font-medium animate-pulse text-sm">
-              Listening... say something like "From Mumbai to Pune"
-            </p>
-          ) : (
-            <p className="mt-4 text-white/55 text-sm">
-              {isSupported ? "Tap the mic to search by voice" : "Voice search not supported"}
-            </p>
-          )}
+          {/* Status text below mic */}
+          <div className="mt-4 min-h-[2rem] flex flex-col items-center gap-1">
+            {isListening ? (
+              <p className="text-white/90 font-medium animate-pulse text-sm flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-400 animate-ping inline-block" />
+                Listening... say "From Mumbai to Pune"
+              </p>
+            ) : !isSupported ? (
+              <p className="text-amber-300 text-xs font-medium flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5" />
+                Voice not supported — use Chrome or Edge
+              </p>
+            ) : errorMessage ? (
+              <p className="text-red-300 text-xs font-medium text-center max-w-xs flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                {errorMessage}
+              </p>
+            ) : (
+              <p className="text-white/55 text-sm">Tap the mic and speak your destination</p>
+            )}
+          </div>
         </div>
       </div>
 
