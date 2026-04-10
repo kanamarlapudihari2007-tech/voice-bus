@@ -32,32 +32,74 @@ export default function SearchPage() {
   const { data: buses, isLoading, isError } = useSearchBuses(searchParams);
 
   const handleVoiceResult = useCallback((transcript: string) => {
-    const lowerTranscript = transcript.toLowerCase();
+    const raw = transcript.trim();
+    const t = raw.toLowerCase();
     let recognized = false;
 
-    const fromToMatch = lowerTranscript.match(/from\s+([a-z\s]+)\s+to\s+([a-z\s]+)/i);
-    if (fromToMatch) {
-      setFrom(fromToMatch[1].trim());
-      setTo(fromToMatch[2].trim());
-      setBusNumber("");
-      recognized = true;
-    } else if (lowerTranscript.includes("bus")) {
-      const busMatch = lowerTranscript.match(/bus\s+(\w+)/i);
-      if (busMatch) {
-        setBusNumber(busMatch[1].trim());
-        setFrom("");
-        setTo("");
-        recognized = true;
+    // ── 1. "from X to Y" / "search X to Y" / "X to Y" ──────────────────────
+    const routePatterns = [
+      /from\s+(.+?)\s+to\s+(.+)/i,           // "from Mumbai to Pune"
+      /(?:search|find|show|go)\s+(.+?)\s+to\s+(.+)/i, // "search Delhi to Agra"
+      /^(.+?)\s+to\s+(.+)$/i,                // "Mumbai to Pune"
+    ];
+    for (const re of routePatterns) {
+      const m = t.match(re);
+      if (m) {
+        const fromCity = m[1].replace(/\b(bus(?:es)?|search|find|show|go)\b/gi, "").trim();
+        const toCity   = m[2].replace(/\b(bus(?:es)?|please|now)\b/gi, "").trim();
+        if (fromCity && toCity) {
+          setFrom(fromCity);
+          setTo(toCity);
+          setBusNumber("");
+          recognized = true;
+          toast({ title: "Voice recognized ✓", description: `${fromCity} → ${toCity}` });
+          break;
+        }
       }
     }
 
-    if (recognized) {
-      toast({ title: "Voice recognized", description: `Searching: ${transcript}` });
-    } else {
+    // ── 2. Bus number patterns ────────────────────────────────────────────────
+    if (!recognized) {
+      const busPatterns = [
+        /bus(?:\s+(?:number|no\.?|#))?\s*([A-Z0-9]+)/i,  // "bus 101" / "bus number BUS101"
+        /(?:number|no\.?|#)\s*([A-Z0-9]+)/i,              // "number 303"
+        /\b(bus\d+)\b/i,                                   // "BUS101" as a word
+      ];
+      for (const re of busPatterns) {
+        const m = t.match(re);
+        if (m) {
+          const num = m[1].toUpperCase().replace(/^BUS/, "");
+          setBusNumber(num.startsWith("BUS") ? num : `BUS${num}`);
+          setFrom("");
+          setTo("");
+          recognized = true;
+          toast({ title: "Voice recognized ✓", description: `Bus number: BUS${num.replace(/^BUS/, "")}` });
+          break;
+        }
+      }
+    }
+
+    // ── 3. Single city / destination ─────────────────────────────────────────
+    if (!recognized) {
+      // Strip filler words
+      const cleaned = t
+        .replace(/\b(search|find|show|buses?|go|to|from|please|for|me|the|a|an)\b/gi, "")
+        .trim();
+      if (cleaned.length >= 3) {
+        setFrom(cleaned);
+        setTo("");
+        setBusNumber("");
+        recognized = true;
+        toast({ title: "Voice recognized ✓", description: `Searching from: ${cleaned}` });
+      }
+    }
+
+    // ── 4. Nothing matched ───────────────────────────────────────────────────
+    if (!recognized) {
       toast({
         variant: "destructive",
         title: "Couldn't understand",
-        description: "Try saying 'From London to Paris' or 'Bus 123'",
+        description: `Heard: "${raw}". Try "Mumbai to Pune", "Bus 101", or just a city name.`,
       });
     }
   }, [toast]);
