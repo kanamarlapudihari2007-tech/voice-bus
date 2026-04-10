@@ -14,6 +14,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Bus, Mic, MicOff, Search, MapPin, Users, ArrowRight, Star, Clock, AlertCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
+function speak(text: string) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = "en-US";
+  utt.rate = 1.05;
+  utt.pitch = 1;
+  window.speechSynthesis.speak(utt);
+}
+
 export default function SearchPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -52,6 +62,7 @@ export default function SearchPage() {
           setTo(toCity);
           setBusNumber("");
           recognized = true;
+          speak(`Searching for ${fromCity} to ${toCity}`);
           toast({ title: "Voice recognized ✓", description: `${fromCity} → ${toCity}` });
           break;
         }
@@ -73,6 +84,7 @@ export default function SearchPage() {
           setFrom("");
           setTo("");
           recognized = true;
+          speak(`Looking up bus number ${num.replace(/^BUS/, "")}`);
           toast({ title: "Voice recognized ✓", description: `Bus number: BUS${num.replace(/^BUS/, "")}` });
           break;
         }
@@ -90,12 +102,14 @@ export default function SearchPage() {
         setTo("");
         setBusNumber("");
         recognized = true;
+        speak(`Searching buses from ${cleaned}`);
         toast({ title: "Voice recognized ✓", description: `Searching from: ${cleaned}` });
       }
     }
 
     // ── 4. Nothing matched ───────────────────────────────────────────────────
     if (!recognized) {
+      speak("Sorry, I couldn't understand that. Try saying a route like Mumbai to Pune.");
       toast({
         variant: "destructive",
         title: "Couldn't understand",
