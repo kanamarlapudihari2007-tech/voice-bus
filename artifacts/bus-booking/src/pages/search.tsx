@@ -71,22 +71,31 @@ export default function SearchPage() {
 
     // ── 2. Bus number patterns ────────────────────────────────────────────────
     if (!recognized) {
+      // Capture EVERYTHING after "bus [number/no]" so multi-word like "AP 2007" works
       const busPatterns = [
-        /bus(?:\s+(?:number|no\.?|#))?\s*([A-Z0-9]+)/i,  // "bus 101" / "bus number BUS101"
-        /(?:number|no\.?|#)\s*([A-Z0-9]+)/i,              // "number 303"
-        /\b(bus\d+)\b/i,                                   // "BUS101" as a word
+        /bus\s+(?:number|no\.?|#)\s+(.+)/i,  // "bus number AP 2007" / "bus no AP 2007"
+        /bus\s+(.+)/i,                         // "bus AP 2007" / "bus 101"
+        /(?:number|no\.?|#)\s+(.+)/i,          // "number 303" / "number AP 2007"
+        /\b(bus[0-9A-Z]+)\b/i,                 // "BUS101" as a single word
       ];
       for (const re of busPatterns) {
         const m = t.match(re);
         if (m) {
-          const num = m[1].toUpperCase().replace(/^BUS/, "");
-          setBusNumber(num.startsWith("BUS") ? num : `BUS${num}`);
-          setFrom("");
-          setTo("");
-          recognized = true;
-          speak(`Looking up bus number ${num.replace(/^BUS/, "")}`);
-          toast({ title: "Voice recognized ✓", description: `Bus number: BUS${num.replace(/^BUS/, "")}` });
-          break;
+          // Normalise: uppercase, strip filler, collapse spaces
+          const raw_num = m[1].toUpperCase().trim()
+            .replace(/\b(PLEASE|NOW|THE|A|AN)\b/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (raw_num.length >= 1) {
+            // Store exactly what was said (e.g. "AP 2007") as the bus number query
+            setBusNumber(raw_num);
+            setFrom("");
+            setTo("");
+            recognized = true;
+            speak(`Looking up bus ${raw_num}`);
+            toast({ title: "Voice recognized ✓", description: `Bus number: ${raw_num}` });
+            break;
+          }
         }
       }
     }
@@ -122,7 +131,7 @@ export default function SearchPage() {
     toast({ variant: "destructive", title: "Microphone error", description: msg });
   }, [toast]);
 
-  const { isListening, isSupported, errorMessage, startListening, stopListening } = useVoice({
+  const { isListening, isSupported, errorMessage, interimTranscript, startListening, stopListening } = useVoice({
     onResult: handleVoiceResult,
     onError: handleVoiceError,
   });
@@ -194,12 +203,21 @@ export default function SearchPage() {
           </button>
 
           {/* Status text below mic */}
-          <div className="mt-4 min-h-[2rem] flex flex-col items-center gap-1">
+          <div className="mt-4 min-h-[3.5rem] flex flex-col items-center gap-1">
             {isListening ? (
-              <p className="text-white/90 font-medium animate-pulse text-sm flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-400 animate-ping inline-block" />
-                Listening... say "From Mumbai to Pune"
-              </p>
+              <>
+                <p className="text-white/90 font-medium text-sm flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-400 animate-ping inline-block" />
+                  Listening…
+                </p>
+                {interimTranscript ? (
+                  <p className="text-cyan-200 text-base font-semibold italic tracking-wide max-w-xs text-center">
+                    "{interimTranscript}"
+                  </p>
+                ) : (
+                  <p className="text-white/50 text-xs">Say "Mumbai to Pune" or "Bus no AP 2007"</p>
+                )}
+              </>
             ) : !isSupported ? (
               <p className="text-amber-300 text-xs font-medium flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5" />
