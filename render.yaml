@@ -2,7 +2,7 @@ services:
   - type: web
     name: voicebus-api
     env: node
-    buildCommand: pnpm install && pnpm run build
+    buildCommand: pnpm install && pnpm --filter @workspace/api-server... run build
     startCommand: cd artifacts/api-server && pnpm run start
     envVars:
       - key: NODE_ENV
